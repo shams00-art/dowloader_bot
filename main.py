@@ -7,10 +7,11 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+from aiohttp import web
 import yt_dlp
 
-# O'z tokeningizni shu yerga yozing
-TOKEN = "8703127466:AAHB4GsnEf8vLLXR4pUp10Igmj7xjLAkMAg"
+# Tokenni Render muhitidan (Environment Variables) o'qiydi
+TOKEN = os.getenv("BOT_TOKEN", "8703127466:AAHB4GsnEf8vLLXR4pUp10Igmj7xjLAkMAg")
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
@@ -19,6 +20,19 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 dp = Dispatcher()
 
+# Render port talabini qondirish uchun kichik veb-server
+async def handle(request):
+    return web.Response(text="Bot is running and alive!")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     welcome_text = (
@@ -26,7 +40,7 @@ async def command_start_handler(message: Message) -> None:
         "🚀 Men biznes rejimda ishlaydigan downloader botman.\n"
         "Istalgan chatga link yuborsangiz, uni yuklab beraman!"
     )
-    await message.answer(welcome_text, parse_mode=ParseMode.MARKDOWN)
+    await message.answer(welcome_text, reply_markup=None, parse_mode=ParseMode.MARKDOWN)
 
 
 # 1. Botning o'ziga yuborilgan linklar uchun
@@ -93,6 +107,9 @@ async def handle_download(message: Message, url: str):
 
 
 async def main() -> None:
+    # Veb-serverni ishga tushiramiz (Render port talabi uchun)
+    await start_web_server()
+
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await bot.delete_webhook(drop_pending_updates=True)
     

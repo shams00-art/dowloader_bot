@@ -36,16 +36,26 @@ async def start_web_server():
 async def command_start_handler(message: Message) -> None:
     welcome_text = (
         f"✨ **Assalomu alaykum, {html.bold(message.from_user.full_name)}!**\n\n"
-        "🚀 Menga istalgan ijtimoiy tarmoqdan link yuboring.\n"
+        "🚀 Menga istalgan chatdan (yoki biznes chatdan) link yuboring.\n"
         "Men sizga ham **videoni**, ham uning **MP3 audiosini** yuboraman!"
     )
     await message.answer(welcome_text, parse_mode=ParseMode.MARKDOWN)
 
 
-# Link kelganda avtomatik ravishda video va MP3 ni birga yuklab yuborish
+# 1. Botning o'ziga yuborilgan linklar uchun
 @dp.message(F.text.regexp(r'https?://[^\s]+'))
 async def download_media(message: Message) -> None:
-    url = message.text.strip()
+    await handle_download(message, message.text.strip())
+
+
+# 2. Telegram Business orqali boshqa chatlarda yozilgandagi linklar uchun (ENG MUHIMI)
+@dp.business_message(F.text.regexp(r'https?://[^\s]+'))
+async def download_business_media(message: Message) -> None:
+    await handle_download(message, message.text.strip())
+
+
+# Asosiy yuklab berish funksiyasi (Ham oddiy, ham biznes chatlar uchun universal)
+async def handle_download(message: Message, url: str):
     status_msg = await message.answer("⚡️ *Video va audio yuklab olinmoqda, kuting...*", parse_mode=ParseMode.MARKDOWN)
     
     video_path = None
@@ -90,7 +100,7 @@ async def download_media(message: Message) -> None:
             if os.path.exists(base + ".mp3"):
                 audio_path = base + ".mp3"
 
-        # Biznes chat uchun ID ni aniqlaymiz
+        # Biznes chat uchun connection id ni aniqlaymiz
         business_conn_id = message.business_connection_id if hasattr(message, "business_connection_id") else None
         send_kwargs = {}
         if business_conn_id:
@@ -108,7 +118,7 @@ async def download_media(message: Message) -> None:
 
         await status_msg.delete()
 
-        # Fayllarni o'chirish (server xotirasi to'lib qolmasligi uchun)
+        # Fayllarni tozalash
         for p in [video_path, audio_path]:
             if p and os.path.exists(p):
                 try:
@@ -130,6 +140,7 @@ async def main() -> None:
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await bot.delete_webhook(drop_pending_updates=True)
     
+    # MUHIM: Telegram serveridan biznes xabarlarni ham qabul qilishini aytamiz
     await dp.start_polling(
         bot, 
         allowed_updates=[

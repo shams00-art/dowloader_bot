@@ -10,7 +10,7 @@ from aiogram.types import Message, FSInputFile
 from aiohttp import web
 import yt_dlp
 
-TOKEN = os.getenv("BOT_TOKEN", "8703127466:AAHB4GsnEf8vLLXR4pUp10Igmj7xjLAkMAg")
+TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
